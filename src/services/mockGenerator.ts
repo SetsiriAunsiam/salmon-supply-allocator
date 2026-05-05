@@ -14,6 +14,7 @@ export const generateMockOrders = (count: number = 5000): Order[] => {
   const suppliers = ['SP-001', 'SP-002', 'SP-000'];
   const types: OrderType[] = ['DAILY', 'EMERGENCY', 'OVERDUE'];
   const customers = ['CT-0001', 'CT-0002', 'CT-0003', 'CT-0004', 'CT-0005'];
+  const remarks = ['', '', '', 'Special for VIP'];
 
   return Array.from({ length: count }, (_, i) => {
     const orderNum = (i + 1).toString().padStart(4, '0');
@@ -33,6 +34,7 @@ export const generateMockOrders = (count: number = 5000): Order[] => {
       unitPrice: 0,
       totalPrice: 0,
       status: 'NONE',
+      remark: Math.random() > 0.8 ? getRandom(remarks) : '',
     };
   });
 };

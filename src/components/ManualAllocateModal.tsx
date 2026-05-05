@@ -85,6 +85,7 @@ export default function ManualAllocateModal({ order, stocks, customers, onConfir
             <Detail label="Supplier"  value={order.supplierId === 'SP-000'  ? 'Any (SP-000)'  : order.allocatedSupplierId  || order.supplierId} />
             <Detail label="Type"      value={order.type} />
             <Detail label="Requested" value={`${order.requestQty} kg`} />
+            <Detail label="Remark"    value={order.remark || 'No remark'} />
           </div>
 
           {/* Constraints */}

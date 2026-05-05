@@ -22,6 +22,7 @@ const COL_WIDTHS = {
   PRICE: 90,
   TOTAL: 100,
   STATUS: 90,
+  REMARK: 150,
   ACTIONS: 55,
 };
 const TOTAL_WIDTH = Object.values(COL_WIDTHS).reduce((a, b) => a + b, 0);
@@ -104,6 +105,9 @@ const OrderRow = memo(function OrderRow({
       </Cell>
       <Cell width={COL_WIDTHS.STATUS}>
         <Badge text={order.status} style={STATUS_STYLE[order.status]} />
+      </Cell>
+      <Cell width={COL_WIDTHS.REMARK} className="text-xs text-gray-500 italic">
+        {order.remark || '—'}
       </Cell>
       <Cell width={COL_WIDTHS.ACTIONS}>
         <button
