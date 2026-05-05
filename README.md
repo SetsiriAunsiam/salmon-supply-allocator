@@ -1,5 +1,7 @@
 # Salmon Supply Allocator
 
+**Live demo:** https://setsiriaunsiam.github.io/salmon-supply-allocator/
+
 A dashboard for automatically and manually distributing salmon inventory across customer orders, with real-time filtering, sorting, and allocation tracking.
 
 ---
@@ -40,7 +42,7 @@ A dashboard for automatically and manually distributing salmon inventory across 
 ## Quick Start
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/SetsiriAunsiam/salmon-supply-allocator.git
 cd salmon-supply-allocator
 npm install
 npm run dev
