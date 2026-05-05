@@ -8,21 +8,21 @@ interface Props {
 }
 
 const COL_WIDTHS = {
-  INDEX: 48,
+  INDEX: 45,
   ORDER_ID: 110,
   SUB_ORDER: 110,
   CUSTOMER: 100,
   ITEM: 80,
-  WAREHOUSE: 90,
+  WAREHOUSE: 100,
   SUPPLIER: 90,
   TYPE: 105,
-  DATE: 96,
-  REQUESTED: 88,
-  ALLOCATED: 88,
+  DATE: 95,
+  REQUESTED: 100,
+  ALLOCATED: 100,
   PRICE: 90,
   TOTAL: 100,
   STATUS: 90,
-  ACTIONS: 56,
+  ACTIONS: 55,
 };
 const TOTAL_WIDTH = Object.values(COL_WIDTHS).reduce((a, b) => a + b, 0);
 const ROW_HEIGHT = 45;
