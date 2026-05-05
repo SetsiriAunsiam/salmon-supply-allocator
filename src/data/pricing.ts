@@ -1,15 +1,17 @@
 import { type OrderType } from '../types/allocation';
 
-const PRICING: Record<string, Record<OrderType, number>> = {
-  'SP-001': { EMERGENCY: 15.00, OVERDUE: 12.00, DAILY: 10.00 },
-  'SP-002': { EMERGENCY: 18.00, OVERDUE: 14.50, DAILY: 12.00 },
+const BASE_PRICING: Record<string, number> = {
+  'SP-001': 123.49,
+  'SP-002': 99.75,
 };
 
-const DEFAULT_PRICING: Record<OrderType, number> = {
-  EMERGENCY: 16.00,
-  OVERDUE: 13.00,
-  DAILY: 11.00,
+const TIERS_PRICING: Record<OrderType, number> = {
+  EMERGENCY: 1.25,
+  OVERDUE: 1.00,
+  DAILY: 0.90,
 };
 
-export const getUnitPrice = (supplierId: string, orderType: OrderType): number =>
-  PRICING[supplierId]?.[orderType] ?? DEFAULT_PRICING[orderType];
+export const getUnitPrice = (supplierId: string, orderType: OrderType): number => {
+  const base = BASE_PRICING[supplierId] || 100.00;
+  return base * TIERS_PRICING[orderType];
+};
