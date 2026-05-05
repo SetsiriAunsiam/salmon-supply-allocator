@@ -1,122 +1,181 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useMemo, useState, useEffect, useCallback, useDeferredValue } from 'react';
+import { generateMockOrders, generateMockStocks, generateMockCustomers } from './services/mockGenerator';
+import { autoAllocate } from './utils/allocationLogic';
+import { bankersRound } from './utils/math';
+import { getUnitPrice } from './data/pricing';
+import { type Order, type Stock, type Customer, type FilterState } from './types/allocation';
+import SummaryBar from './components/SummaryBar';
+import StockPanel from './components/StockPanel';
+import FilterBar from './components/FilterBar';
+import OrderTable from './components/OrderTable';
+import ManualAllocateModal from './components/ManualAllocateModal';
+
+const DEFAULT_FILTERS: FilterState = {
+  search: '',
+  status: 'ALL STATUS',
+  type: 'ALL TYPES',
+  customerId: '',
+  warehouseId: '',
+  supplierId: '',
+  itemId: '',
+};
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [orders,    setOrders]    = useState<Order[]>([]);
+  const [stocks,    setStocks]    = useState<Stock[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filters,   setFilters]   = useState<FilterState>(DEFAULT_FILTERS);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [isAllocating, setIsAllocating] = useState(false);
+
+  const seed = useMemo(() => ({
+    orders:    generateMockOrders(5000),
+    stocks:    generateMockStocks(),
+    customers: generateMockCustomers(),
+  }), []);
+
+  const runAllocation = useCallback((seedOrders: Order[], seedStocks: Stock[], seedCustomers: Customer[]) => {
+    setIsAllocating(true);
+    setTimeout(() => {
+      const result = autoAllocate(seedOrders, seedStocks, seedCustomers);
+      setOrders(result.orders);
+      setStocks(result.stocks);
+      setCustomers(result.customers);
+      setIsAllocating(false);
+    }, 0);
+  }, []);
+
+  // Auto-run on mount
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    runAllocation(seed.orders, seed.stocks, seed.customers);
+  }, [runAllocation, seed]);
+
+  const handleRunAllocation = useCallback(() => {
+    if (!window.confirm('Re-running auto allocation will reset all manual changes. Continue?')) return;
+    const freshOrders    = seed.orders;
+    const freshStocks    = seed.stocks.map(s => ({ ...s, quantity: s.originalQuantity }));
+    const freshCustomers = seed.customers.map(c => ({ ...c, usedCredit: 0 }));
+    runAllocation(freshOrders, freshStocks, freshCustomers);
+  }, [seed, runAllocation]);
+
+  const handleManualAllocate = useCallback((order: Order, newQty: number) => {
+    if (newQty === order.allocatedQty) return;
+    const afterReturn = stocks.map(s => {
+      if (
+        s.warehouseId === order.allocatedWarehouseId &&
+        s.supplierId  === order.allocatedSupplierId  &&
+        s.itemId      === order.itemId
+      ) {
+        return { ...s, quantity: bankersRound(s.quantity + order.allocatedQty) };
+      }
+      return s;
+    });
+
+    let newAllocatedWarehouseId = order.allocatedWarehouseId;
+    let newAllocatedSupplierId  = order.allocatedSupplierId;
+    let newStocks = afterReturn;
+
+    if (newQty > 0) {
+      const best = afterReturn
+        .filter(s => {
+          const matchItem = s.itemId === order.itemId;
+          const matchWH   = order.warehouseId === 'WH-000' || s.warehouseId === order.warehouseId;
+          const matchSP   = order.supplierId  === 'SP-000'  || s.supplierId  === order.supplierId;
+          return matchItem && matchWH && matchSP && s.quantity >= newQty;
+        })
+        .sort((a, b) => b.quantity - a.quantity)[0];
+
+      if (best) {
+        newAllocatedWarehouseId = best.warehouseId;
+        newAllocatedSupplierId  = best.supplierId;
+        newStocks = afterReturn.map(s =>
+          s.warehouseId === best.warehouseId && s.supplierId === best.supplierId && s.itemId === best.itemId
+            ? { ...s, quantity: bankersRound(s.quantity - newQty) }
+            : s
+        );
+      }
+    }
+
+    const unitPrice  = getUnitPrice(newAllocatedSupplierId, order.type);
+    const totalPrice = bankersRound(newQty * unitPrice);
+    const status: Order['status'] = newQty >= order.requestQty ? 'FULL' : newQty > 0 ? 'PARTIAL' : 'NONE';
+
+    setStocks(newStocks);
+    setCustomers(prev => prev.map(c =>
+      c.id === order.customerId
+        ? { ...c, usedCredit: bankersRound(c.usedCredit - order.allocatedQty + newQty) }
+        : c
+    ));
+    setOrders(prev => prev.map(o =>
+      o.id === order.id
+        ? { ...o, allocatedQty: newQty, allocatedWarehouseId: newAllocatedWarehouseId, allocatedSupplierId: newAllocatedSupplierId, unitPrice, totalPrice, status }
+        : o
+    ));
+  }, [stocks]);
+
+  const deferredFilters = useDeferredValue(filters);
+
+  const filteredOrders = useMemo(() => {
+    const q = deferredFilters.search.toLowerCase().trim();
+    return orders.filter(o => {
+      if (q && !o.id.toLowerCase().includes(q) && !o.customerId.toLowerCase().includes(q) && !o.subOrderId.toLowerCase().includes(q)) return false;
+      if (deferredFilters.status !== 'ALL STATUS' && o.status !== deferredFilters.status) return false;
+      if (deferredFilters.type   !== 'ALL TYPES' && o.type   !== deferredFilters.type)   return false;
+      if (deferredFilters.customerId  && o.customerId  !== deferredFilters.customerId)  return false;
+      if (deferredFilters.warehouseId && o.warehouseId !== deferredFilters.warehouseId) return false;
+      if (deferredFilters.supplierId  && o.supplierId  !== deferredFilters.supplierId)  return false;
+      if (deferredFilters.itemId      && o.itemId      !== deferredFilters.itemId)      return false;
+      return true;
+    });
+  }, [orders, deferredFilters]);
+
+  const liveEditingOrder = editingOrder
+    ? orders.find(o => o.id === editingOrder.id) ?? null
+    : null;
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
+      {/* Header */}
+      <header className="flex items-center gap-3 px-6 py-3 bg-blue-700 text-white shadow-md shrink-0">
+        <h1 className="text-lg font-bold tracking-tight">Salmon Supply Allocator</h1>
+      </header>
 
-      <div className="ticks"></div>
+      {/* Summary bar */}
+      <SummaryBar orders={orders} onRunAllocation={handleRunAllocation} isAllocating={isAllocating} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {/* Stock panel */}
+      <StockPanel stocks={stocks} />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {/* Filter bar */}
+      <FilterBar
+        filters={filters}
+        onChange={setFilters}
+        orders={orders}
+        filteredCount={filteredOrders.length}
+      />
+
+      {/* Order table */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {isAllocating ? (
+          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+            Running allocation…
+          </div>
+        ) : (
+          <OrderTable orders={filteredOrders} onEditOrder={setEditingOrder} />
+        )}
+      </div>
+
+      {/* Manual allocation modal */}
+      <ManualAllocateModal
+        order={liveEditingOrder}
+        stocks={stocks}
+        customers={customers}
+        onConfirm={handleManualAllocate}
+        onClose={() => setEditingOrder(null)}
+      />
+    </div>
+  );
 }
 
-export default App
+export default App;
