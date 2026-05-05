@@ -37,8 +37,8 @@ export interface Customer {
 
 export interface FilterState {
   search: string;
-  status: OrderStatus | 'ALL';
-  type: OrderType | 'ALL';
+  status: OrderStatus | 'ALL STATUS';
+  type: OrderType | 'ALL TYPES';
   customerId: string;
   warehouseId: string;
   supplierId: string;
