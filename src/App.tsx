@@ -9,6 +9,7 @@ import StockPanel from './components/StockPanel';
 import FilterBar from './components/FilterBar';
 import OrderTable from './components/OrderTable';
 import ManualAllocateModal from './components/ManualAllocateModal';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const DEFAULT_FILTERS: FilterState = {
   search: '',
@@ -155,16 +156,28 @@ function App() {
         filteredCount={filteredOrders.length}
       />
 
-      {/* Order table */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {isAllocating ? (
-          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-            Running allocation…
+      {/* Order table — wrapped with Error Boundary */}
+      <ErrorBoundary
+        fallback={(error, reset) => (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-sm text-gray-500 bg-gray-50">
+            <span className="text-red-500 font-medium">Table failed to render</span>
+            <span className="font-mono text-xs text-red-400">{error.message}</span>
+            <button onClick={reset} className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">
+              Retry
+            </button>
           </div>
-        ) : (
-          <OrderTable orders={filteredOrders} onEditOrder={setEditingOrder} />
         )}
-      </div>
+      >
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {isAllocating ? (
+            <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+              Running allocation…
+            </div>
+          ) : (
+            <OrderTable orders={filteredOrders} onEditOrder={setEditingOrder} />
+          )}
+        </div>
+      </ErrorBoundary>
 
       {/* Manual allocation modal */}
       <ManualAllocateModal
