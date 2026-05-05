@@ -60,7 +60,7 @@ export const autoAllocate = (
       }
     }
 
-    const unitPrice = getUnitPrice(allocatedSupplierId, order.type);
+    const unitPrice  = allocated > 0 ? getUnitPrice(allocatedSupplierId, order.type) : 0;
     const totalPrice = bankersRound(allocated * unitPrice);
 
     let status: Order['status'] = 'NONE';
