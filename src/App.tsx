@@ -10,6 +10,8 @@ import FilterBar from './components/FilterBar';
 import OrderTable from './components/OrderTable';
 import ManualAllocateModal from './components/ManualAllocateModal';
 import ErrorBoundary from './components/ErrorBoundary';
+import ToastContainer from './components/ToastContainer';
+import { useToast } from './hooks/useToast';
 
 const DEFAULT_FILTERS: FilterState = {
   search: '',
@@ -27,6 +29,7 @@ function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filters,   setFilters]   = useState<FilterState>(DEFAULT_FILTERS);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const { toasts, show: showToast, dismiss: dismissToast } = useToast();
   const [isAllocating, setIsAllocating] = useState(false);
 
   const seed = useMemo(() => ({
@@ -113,7 +116,23 @@ function App() {
         ? { ...o, allocatedQty: newQty, allocatedWarehouseId: newAllocatedWarehouseId, allocatedSupplierId: newAllocatedSupplierId, unitPrice, totalPrice, status }
         : o
     ));
-  }, [stocks]);
+
+    const delta = newQty - order.allocatedQty;
+    if (newQty === 0) {
+      showToast({
+        type: 'warning',
+        title: 'Allocation Cleared',
+        message: `${order.id} — all ${order.allocatedQty} kg released back to stock`,
+      });
+    } else {
+      const sign = delta > 0 ? '+' : '';
+      showToast({
+        type: status === 'FULL' ? 'success' : 'info',
+        title: status === 'FULL' ? 'Fully Allocated' : 'Partially Allocated',
+        message: `${order.id} · ${newQty} kg (${sign}${delta}) · $${totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+      });
+    }
+  }, [stocks, showToast]);
 
   const deferredFilters = useDeferredValue(filters);
 
@@ -187,6 +206,9 @@ function App() {
         onConfirm={handleManualAllocate}
         onClose={() => setEditingOrder(null)}
       />
+
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
