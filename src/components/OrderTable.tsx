@@ -7,9 +7,26 @@ interface Props {
   onEditOrder: (order: Order) => void;
 }
 
-const COL_WIDTHS = [45, 110, 110, 100, 80, 100, 90, 105, 95, 100, 100, 90, 100, 90, 55];
-const TOTAL_WIDTH = COL_WIDTHS.reduce((a, b) => a + b, 0);
+const COL_WIDTHS = {
+  INDEX: 48,
+  ORDER_ID: 110,
+  SUB_ORDER: 110,
+  CUSTOMER: 100,
+  ITEM: 80,
+  WAREHOUSE: 90,
+  SUPPLIER: 90,
+  TYPE: 105,
+  DATE: 96,
+  REQUESTED: 88,
+  ALLOCATED: 88,
+  PRICE: 90,
+  TOTAL: 100,
+  STATUS: 90,
+  ACTIONS: 56,
+};
+const TOTAL_WIDTH = Object.values(COL_WIDTHS).reduce((a, b) => a + b, 0);
 const ROW_HEIGHT = 45;
+const COLUMN_WIDTHS = Object.values(COL_WIDTHS);
 
 const TYPE_STYLE: Record<OrderType, string> = {
   EMERGENCY: 'bg-red-100 text-red-700 border border-red-300',
@@ -52,43 +69,43 @@ const OrderRow = memo(function OrderRow({
       }}
       className={`flex items-center border-b border-gray-100 hover:bg-blue-50 transition-colors ${isEven ? 'bg-white' : 'bg-gray-50/50'}`}
     >
-      <Cell width={COL_WIDTHS[0]}  className="text-gray-400 text-xs">{(index + 1).toLocaleString()}</Cell>
-      <Cell width={COL_WIDTHS[1]}  className="font-mono text-xs font-medium text-gray-800">{order.id}</Cell>
-      <Cell width={COL_WIDTHS[2]}  className="font-mono text-xs text-gray-500">{order.subOrderId}</Cell>
-      <Cell width={COL_WIDTHS[3]}  className="text-xs text-gray-700">{order.customerId}</Cell>
-      <Cell width={COL_WIDTHS[4]}  className="text-xs text-gray-700">{order.itemId}</Cell>
-      <Cell width={COL_WIDTHS[5]}  className="text-xs text-gray-600">
+      <Cell width={COL_WIDTHS.INDEX}  className="text-gray-400 text-xs">{(index + 1).toLocaleString()}</Cell>
+      <Cell width={COL_WIDTHS.ORDER_ID}  className="font-mono text-xs font-medium text-gray-800">{order.id}</Cell>
+      <Cell width={COL_WIDTHS.SUB_ORDER}  className="font-mono text-xs text-gray-500">{order.subOrderId}</Cell>
+      <Cell width={COL_WIDTHS.CUSTOMER}  className="text-xs text-gray-700">{order.customerId}</Cell>
+      <Cell width={COL_WIDTHS.ITEM}  className="text-xs text-gray-700">{order.itemId}</Cell>
+      <Cell width={COL_WIDTHS.WAREHOUSE}  className="text-xs text-gray-600">
         {order.warehouseId === 'WH-000'
           ? <span className="italic text-gray-400">Any</span>
           : order.allocatedWarehouseId || order.warehouseId}
       </Cell>
-      <Cell width={COL_WIDTHS[6]}  className="text-xs text-gray-600">
+      <Cell width={COL_WIDTHS.SUPPLIER}  className="text-xs text-gray-600">
         {order.supplierId === 'SP-000'
           ? <span className="italic text-gray-400">Any</span>
           : order.allocatedSupplierId || order.supplierId}
       </Cell>
-      <Cell width={COL_WIDTHS[7]}>
+      <Cell width={COL_WIDTHS.TYPE}>
         <Badge text={order.type} style={TYPE_STYLE[order.type]} />
       </Cell>
-      <Cell width={COL_WIDTHS[8]}  className="text-xs text-gray-500">
+      <Cell width={COL_WIDTHS.DATE}  className="text-xs text-gray-500">
         {new Date(order.createDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}
       </Cell>
-      <Cell width={COL_WIDTHS[9]}  className="text-xs font-medium text-gray-700 text-right pr-4">{order.requestQty.toLocaleString()}</Cell>
-      <Cell width={COL_WIDTHS[10]} className={`text-xs font-semibold text-right pr-4 ${order.allocatedQty > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
+      <Cell width={COL_WIDTHS.REQUESTED}  className="text-xs font-medium text-gray-700 text-right pr-4">{order.requestQty.toLocaleString()}</Cell>
+      <Cell width={COL_WIDTHS.ALLOCATED} className={`text-xs font-semibold text-right pr-4 ${order.allocatedQty > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
         {order.allocatedQty.toLocaleString()}
       </Cell>
-      <Cell width={COL_WIDTHS[11]} className="text-xs text-gray-600 text-right pr-4">
+      <Cell width={COL_WIDTHS.PRICE} className="text-xs text-gray-600 text-right pr-4">
         {order.unitPrice > 0 ? `$${order.unitPrice.toFixed(2)}` : '—'}
       </Cell>
-      <Cell width={COL_WIDTHS[12]} className="text-xs font-medium text-gray-700 text-right pr-4">
+      <Cell width={COL_WIDTHS.TOTAL} className="text-xs font-medium text-gray-700 text-right pr-4">
         {order.totalPrice > 0
           ? `$${order.totalPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : '—'}
       </Cell>
-      <Cell width={COL_WIDTHS[13]}>
+      <Cell width={COL_WIDTHS.STATUS}>
         <Badge text={order.status} style={STATUS_STYLE[order.status]} />
       </Cell>
-      <Cell width={COL_WIDTHS[14]}>
+      <Cell width={COL_WIDTHS.ACTIONS}>
         <button
           onClick={() => onEdit(order)}
           title="Manual allocate"
@@ -128,7 +145,7 @@ export default function OrderTable({ orders, onEditOrder }: Props) {
           {HEADERS.map((h, i) => (
             <div
               key={i}
-              style={{ width: COL_WIDTHS[i], minWidth: COL_WIDTHS[i] }}
+              style={{ width: COLUMN_WIDTHS[i], minWidth: COLUMN_WIDTHS[i] }}
               className="px-3 py-2 text-xs font-semibold text-gray-600 uppercase tracking-wide select-none truncate"
             >
               {h}
